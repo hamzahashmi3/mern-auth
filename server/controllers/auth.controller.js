@@ -51,32 +51,39 @@ exports.signup=(req, res)=>{
     });
     const token = jwt.sign({name, email, password}, process.env.JWT_ACCOUNT_ACTIVATION, {expiresIn: "10m"});
 
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
+    let transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
         auth: {
-          user: 'hamzahashmi.office@gmail.com',
-          pass: 'Hashmi.007'
+          type: "OAuth2",
+        },
+      });
+      
+      transporter.set("oauth2_provision_cb", (user, renew, callback) => {
+        let accessToken = userTokens[user];
+        if (!accessToken) {
+          return callback(new Error("Unknown user"));
+        } else {
+          return callback(null, accessToken);
         }
       });
-
-    const emailData = {
+      
+      transporter.sendMail({
         from: process.env.EMAIL_FROM,
         to: email,
         subject: "Signup succeeded",
+        text: "I hope this message gets through!",
         html: `
             <h1>Please use the Following link to Activate your account.</h1>
             <p>${process.env.CLIENT_URL}/auth/activate${token}</p>
             <hr/>
             <p>this email may contain sensitive information</p>
             <p>${process.env.CLIENT_URL}</p>
-            `}
-      
-      transporter.sendMail(emailData, function(error, info){
-        if (error) {
-          console.log(error);
-        } else {
-          console.log('Email sent: ' + info.response);
-        }
+             `,
+        auth: {
+          user: "user@example.com",
+        },
       });
 
 
