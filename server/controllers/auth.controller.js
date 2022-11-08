@@ -1,7 +1,10 @@
 
 const userModel = require("../models/user.model");
+const userVerificationModel = require("../models/userVerification.model");
 const User = require("../models/user.model");
 const jwt = require("jsonwebtoken");   
+const {v4:uuidv4} = require("uuid");
+require("dotenv").config();
 // sendgrid
 // const sgMail = require('@sendgrid/mail');
 // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -36,8 +39,55 @@ const nodemailer = require('nodemailer');
 //     })
 // }
 
-  
 
+const transporter = nodemailer.createTransport({
+    service:"gmail",
+    auth: {
+      user: process.env.AUTH_EMAIL,
+      pass: process.env.AUTH_PASS,
+    },
+  });
+
+  transporter.verify((error, success)=>{
+    if(error){
+        console.log(error);
+    }else{
+        console.log("ready for Message");
+        console.log(success);
+
+    }
+  })
+
+  const sendVerificationEmail= ({_id, name}, res) => {
+    const currentUrl = "http://localhost:8000/"
+
+    const uniqueString = uuidv4 + _id;
+
+    const mailOptions = {
+        from: process.env.AUTH_EMAIL,
+        to: email,
+        subject: "Verify Email",
+        html: `
+        <p>Please Verify your email address to complete the Signup and login into your account.</p>
+        <p>This Link <b>Expires in 6 hours </b>.</p>
+        <p>Press <a href=${currentUrl + "user/verify" + _id + "/" + uniqueString}> here </a> to proceed.</p>
+        <hr/>
+        <p>this email may contain sensitive information</p>
+        <p>${process.env.CLIENT_URL}</p>
+        `}
+        sgMail.send(emailData).then(()=>{
+            console.log("email sent");
+            res.json({
+                message: `A verification email has been sent to ${email}.Follow the instructions to activate your account.`
+            })
+        })
+        .catch(err=>{
+            console.log("error sending email", err);
+            res.json({
+                message: err.message
+            })
+        })
+  }
 
 exports.signup=(req, res)=>{
     const {name, email, password} = req.body;
@@ -49,6 +99,9 @@ exports.signup=(req, res)=>{
         })
     }
     });
+
+
+
     const token = jwt.sign({name, email, password}, process.env.JWT_ACCOUNT_ACTIVATION, {expiresIn: "10m"});
 
     let transporter = nodemailer.createTransport({
@@ -85,6 +138,23 @@ exports.signup=(req, res)=>{
           user: "user@example.com",
         },
       });
+
+    let newUser = new User({name, email, password, verifird: false})
+
+            newUser.save((err, success)=> {
+                if(err){
+                    return res.status(400).json({
+                        error: err
+                    })
+                }
+                // sendVerificationEmail(result, res)
+                // res.json({
+                //     message: "signup success! please signIn",
+                //     user:newUser
+                // })
+            })
+            
+
 
 
     // const emailData = {

@@ -24,6 +24,7 @@ const userSchema = new mongoose.Schema({
         max: 32
     },
     salt:String,
+    verifird:Boolean,
     role:{
         type:String,
         default:"subscriber"
